@@ -15,6 +15,15 @@ const api = axios.create({
     },
 });
 
+// Response interceptor for error handling
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error('API Error:', error.response?.data || error.message);
+        return Promise.reject(error);
+    }
+);
+
 // ==================== EMPLOYEE ENDPOINTS ====================
 
 export const getEmployees = async () => {
@@ -63,6 +72,38 @@ export const getAttendanceByDate = async (date) => {
 
 export const getEmployeeAttendance = async (employeeId, limit = 30) => {
     const response = await api.get(`/api/attendance/${employeeId}?limit=${limit}`);
+    return response.data;
+};
+
+export const updateAttendance = async (attendanceId, updates) => {
+    const response = await api.put(`/api/attendance/${attendanceId}`, updates);
+    return response.data;
+};
+
+// ==================== BRANCH ENDPOINTS ====================
+
+export const getBranches = async () => {
+    const response = await api.get('/api/branches');
+    return response.data;
+};
+
+export const getBranch = async (branchId) => {
+    const response = await api.get(`/api/branches/${branchId}`);
+    return response.data;
+};
+
+export const createBranch = async (branchData) => {
+    const response = await api.post('/api/branches', branchData);
+    return response.data;
+};
+
+export const updateBranch = async (branchId, updates) => {
+    const response = await api.put(`/api/branches/${branchId}`, updates);
+    return response.data;
+};
+
+export const deleteBranch = async (branchId) => {
+    const response = await api.delete(`/api/branches/${branchId}`);
     return response.data;
 };
 

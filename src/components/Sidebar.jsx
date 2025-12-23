@@ -17,7 +17,7 @@ const Sidebar = () => {
     const menuItems = [
         { path: '/', icon: <FiHome />, label: 'Dashboard' },
         { path: '/employees', icon: <FiUsers />, label: 'Employees' },
-        { path: '/geofence', icon: <FiMapPin />, label: 'Geo-fence Settings' },
+        { path: '/branches', icon: <FiMapPin />, label: 'Branches' },
         { path: '/attendance', icon: <FiCalendar />, label: 'Attendance' },
     ];
 

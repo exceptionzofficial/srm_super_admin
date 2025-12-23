@@ -1,7 +1,14 @@
 /* Dashboard Page Styles */
 
 .dashboard {
-    max-width: 1200px;
+    max-width: 1400px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
 }
 
 .date-display {
@@ -9,6 +16,59 @@
     color: var(--text-secondary);
 }
 
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Export Dropdown */
+.export-dropdown {
+    position: relative;
+}
+
+.export-dropdown:hover .dropdown-content {
+    display: flex;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-direction: column;
+    z-index: 100;
+    margin-top: 4px;
+}
+
+.dropdown-content button {
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.dropdown-content button:hover {
+    background: var(--bg-primary);
+}
+
+.dropdown-content button:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.dropdown-content button:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+/* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -51,14 +111,9 @@
     color: var(--warning);
 }
 
-.stat-icon.geofence {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-}
-
-.stat-icon.geofence.active {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success);
+.stat-icon.branches {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
 }
 
 .stat-info {
@@ -66,10 +121,185 @@
     flex-direction: column;
 }
 
+/* Charts */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.chart-card {
+    padding: 20px;
+}
+
+.chart-card-small {
+    padding: 20px;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+.chart-container-small {
+    height: 250px;
+    position: relative;
+}
+
 .section-title {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 16px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header .section-title {
+    margin-bottom: 0;
+}
+
+/* Branch Overview Table */
+.branch-overview-card {
+    overflow: hidden;
+}
+
+.branch-count-badge {
+    background: var(--primary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.branch-table-container {
+    overflow-x: auto;
+    margin-top: 16px;
+}
+
+.branch-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.branch-table th {
+    background: linear-gradient(135deg, var(--bg-primary), var(--border));
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
+}
+
+.branch-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.branch-table tbody tr:hover {
+    background: rgba(255, 107, 53, 0.03);
+}
+
+.text-center {
+    text-align: center;
+}
+
+.branch-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.branch-icon {
+    color: var(--primary);
+    font-size: 16px;
+}
+
+.branch-address {
+    color: var(--text-secondary);
+    font-size: 13px;
+    max-width: 200px;
+}
+
+/* Stat Badges in Table */
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.employees-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+}
+
+.registered-badge {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+}
+
+.present-badge {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+/* Rate Badge */
+.rate-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rate-good {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.rate-medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.rate-low {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+/* Totals Row */
+.totals-row {
+    background: var(--bg-primary);
+    border-top: 2px solid var(--primary);
+}
+
+.totals-row td {
+    padding: 14px 16px;
+    font-weight: 600;
+}
+
+/* Button sizes */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
 }
 
 .empty-message {
@@ -79,14 +309,40 @@
     font-style: italic;
 }
 
+/* Responsive */
+@media (max-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 1024px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
     }
 }
 
 @media (max-width: 640px) {
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .branch-stat-body {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
     }
 }

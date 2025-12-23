@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
-import GeofenceSettings from './pages/GeofenceSettings';
+import Branches from './pages/Branches';
 import Attendance from './pages/Attendance';
 import './index.css';
 
@@ -20,7 +20,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
-            <Route path="/geofence" element={<GeofenceSettings />} />
+            <Route path="/branches" element={<Branches />} />
             <Route path="/attendance" element={<Attendance />} />
           </Routes>
         </main>

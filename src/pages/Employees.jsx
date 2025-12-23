@@ -3,12 +3,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiUser } from 'react-icons/fi';
-import { getEmployees, createEmployee, updateEmployee, deleteEmployee } from '../services/api';
+import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMapPin } from 'react-icons/fi';
+import { getEmployees, createEmployee, updateEmployee, deleteEmployee, getBranches } from '../services/api';
 import './Employees.css';
 
 const Employees = () => {
     const [employees, setEmployees] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
@@ -19,20 +20,25 @@ const Employees = () => {
         phone: '',
         department: '',
         designation: '',
+        branchId: '',
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
     useEffect(() => {
-        loadEmployees();
+        loadData();
     }, []);
 
-    const loadEmployees = async () => {
+    const loadData = async () => {
         try {
-            const response = await getEmployees();
-            setEmployees(response.employees || []);
+            const [empResponse, branchResponse] = await Promise.all([
+                getEmployees(),
+                getBranches().catch(() => ({ branches: [] })),
+            ]);
+            setEmployees(empResponse.employees || []);
+            setBranches(branchResponse.branches || []);
         } catch (error) {
-            console.error('Error loading employees:', error);
+            console.error('Error loading data:', error);
         } finally {
             setLoading(false);
         }
@@ -48,6 +54,7 @@ const Employees = () => {
                 phone: employee.phone || '',
                 department: employee.department || '',
                 designation: employee.designation || '',
+                branchId: employee.branchId || '',
             });
         } else {
             setEditingEmployee(null);
@@ -58,6 +65,7 @@ const Employees = () => {
                 phone: '',
                 department: '',
                 designation: '',
+                branchId: branches.length > 0 ? branches[0].branchId : '',
             });
         }
         setShowModal(true);
@@ -80,6 +88,11 @@ const Employees = () => {
             return;
         }
 
+        if (!formData.branchId && branches.length > 0) {
+            setError('Please select a branch');
+            return;
+        }
+
         try {
             if (editingEmployee) {
                 await updateEmployee(editingEmployee.employeeId, formData);
@@ -89,7 +102,7 @@ const Employees = () => {
                 setSuccess('Employee created successfully');
             }
             closeModal();
-            loadEmployees();
+            loadData();
             setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
             setError(error.response?.data?.message || 'Error saving employee');
@@ -102,11 +115,16 @@ const Employees = () => {
         try {
             await deleteEmployee(employeeId);
             setSuccess('Employee deleted successfully');
-            loadEmployees();
+            loadData();
             setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
             setError(error.response?.data?.message || 'Error deleting employee');
         }
+    };
+
+    const getBranchName = (branchId) => {
+        const branch = branches.find(b => b.branchId === branchId);
+        return branch?.name || '-';
     };
 
     if (loading) {
@@ -138,8 +156,8 @@ const Employees = () => {
                                 <tr>
                                     <th>Employee ID</th>
                                     <th>Name</th>
+                                    <th>Branch</th>
                                     <th>Department</th>
-                                    <th>Designation</th>
                                     <th>Face Status</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -162,8 +180,13 @@ const Employees = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        <td>
+                                            <div className="branch-cell">
+                                                <FiMapPin className="branch-icon-small" />
+                                                <span>{getBranchName(emp.branchId)}</span>
+                                            </div>
+                                        </td>
                                         <td>{emp.department || '-'}</td>
-                                        <td>{emp.designation || '-'}</td>
                                         <td>
                                             <span className={`badge ${emp.faceId ? 'badge-success' : 'badge-warning'}`}>
                                                 {emp.faceId ? 'Registered' : 'Not Registered'}
@@ -251,6 +274,25 @@ const Employees = () => {
                                         placeholder="Phone number"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Branch *</label>
+                                <select
+                                    className="form-input form-select"
+                                    value={formData.branchId}
+                                    onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                                >
+                                    <option value="">Select a branch</option>
+                                    {branches.map((branch) => (
+                                        <option key={branch.branchId} value={branch.branchId}>
+                                            {branch.name} {branch.address ? `(${branch.address})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {branches.length === 0 && (
+                                    <p className="form-hint">No branches available. Please add branches first.</p>
+                                )}
                             </div>
 
                             <div className="form-row">
