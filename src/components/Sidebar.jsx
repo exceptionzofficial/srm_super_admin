@@ -12,6 +12,7 @@ import {
     FiLogOut
 } from 'react-icons/fi';
 import './Sidebar.css';
+import srmLogo from '../assets/srm-logo.png';
 
 const Sidebar = () => {
     const menuItems = [
@@ -26,11 +27,8 @@ const Sidebar = () => {
             {/* Logo */}
             <div className="sidebar-header">
                 <div className="logo">
-                    <span className="logo-icon">🍬</span>
-                    <div className="logo-text">
-                        <span className="logo-title">SRM Sweets</span>
-                        <span className="logo-subtitle">Super Admin</span>
-                    </div>
+                    <img src={srmLogo} alt="SRM Sweets" className="logo-image" />
+                    <span className="logo-subtitle">Super Admin</span>
                 </div>
             </div>
 

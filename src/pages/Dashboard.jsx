@@ -51,6 +51,14 @@ const Dashboard = () => {
 
     useEffect(() => {
         loadDashboardData();
+
+        // Auto-refresh every 60 seconds for real-time updates
+        const refreshInterval = setInterval(() => {
+            console.log('[Dashboard] Auto-refreshing data...');
+            loadDashboardData();
+        }, 60000); // 60 seconds
+
+        return () => clearInterval(refreshInterval);
     }, []);
 
     const loadDashboardData = async () => {

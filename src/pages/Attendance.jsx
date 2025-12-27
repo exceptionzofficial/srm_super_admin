@@ -1,11 +1,11 @@
 /**
- * Attendance Reports Page - With Edit Functionality
+ * Attendance Reports Page - View Only (Work time from GPS tracking)
  */
 
 import { useState, useEffect } from 'react';
-import { FiCalendar, FiDownload, FiEdit2, FiSave, FiX, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiCalendar, FiDownload, FiClock, FiMapPin } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
-import { getAttendanceByDate, getEmployees, getBranches, updateAttendance } from '../services/api';
+import { getAttendanceByDate, getEmployees, getBranches } from '../services/api';
 import './Attendance.css';
 
 const Attendance = () => {
@@ -16,13 +16,17 @@ const Attendance = () => {
     const [employees, setEmployees] = useState([]);
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [editingRecord, setEditingRecord] = useState(null);
-    const [editForm, setEditForm] = useState({});
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
 
     useEffect(() => {
         loadData();
+
+        // Auto-refresh every 60 seconds for real-time updates
+        const refreshInterval = setInterval(() => {
+            console.log('[Attendance] Auto-refreshing data...');
+            loadData();
+        }, 60000);
+
+        return () => clearInterval(refreshInterval);
     }, [selectedDate]);
 
     const loadData = async () => {
@@ -50,12 +54,6 @@ const Attendance = () => {
             hour: '2-digit',
             minute: '2-digit',
         });
-    };
-
-    const formatTimeForInput = (isoString) => {
-        if (!isoString) return '';
-        const date = new Date(isoString);
-        return date.toTimeString().slice(0, 5);
     };
 
     const getEmployeeName = (employeeId) => {
@@ -88,47 +86,6 @@ const Attendance = () => {
         return `${hours}h ${minutes}m`;
     };
 
-    // Edit functionality
-    const startEdit = (record) => {
-        setEditingRecord(record.attendanceId);
-        setEditForm({
-            checkInTime: formatTimeForInput(record.checkInTime),
-            checkOutTime: formatTimeForInput(record.checkOutTime),
-            status: record.status,
-        });
-    };
-
-    const cancelEdit = () => {
-        setEditingRecord(null);
-        setEditForm({});
-    };
-
-    const saveEdit = async (record) => {
-        setSaving(true);
-        try {
-            // Convert time strings to full ISO strings
-            const dateStr = selectedDate;
-            const checkInTime = editForm.checkInTime ? `${dateStr}T${editForm.checkInTime}:00` : record.checkInTime;
-            const checkOutTime = editForm.checkOutTime ? `${dateStr}T${editForm.checkOutTime}:00` : record.checkOutTime;
-
-            await updateAttendance(record.attendanceId, {
-                checkInTime,
-                checkOutTime,
-                status: editForm.status,
-            });
-
-            setMessage({ type: 'success', text: 'Attendance updated successfully!' });
-            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-
-            cancelEdit();
-            loadData();
-        } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to update attendance' });
-        } finally {
-            setSaving(false);
-        }
-    };
-
     // Export to Excel
     const exportToExcel = () => {
         const data = attendance.map(record => ({
@@ -153,11 +110,15 @@ const Attendance = () => {
         XLSX.writeFile(workbook, `Attendance_${selectedDate}.xlsx`);
     };
 
-    // Stats
+    // Calculate unique employees who have attendance
+    const uniqueEmployeeIds = [...new Set(attendance.map(a => a.employeeId))];
+
+    // Stats - based on unique employees
     const stats = {
         total: employees.length,
-        present: attendance.length,
-        absent: employees.length - attendance.length,
+        present: uniqueEmployeeIds.length, // Unique employees who checked in
+        absent: Math.max(0, employees.length - uniqueEmployeeIds.length), // Employees who didn't check in
+        sessions: attendance.length, // Total check-in sessions
         onTime: attendance.filter(a => a.status === 'present').length,
         late: attendance.filter(a => a.status === 'late').length,
     };
@@ -182,14 +143,6 @@ const Attendance = () => {
                 </div>
             </div>
 
-            {/* Messages */}
-            {message.text && (
-                <div className={`alert alert-${message.type}`}>
-                    {message.type === 'success' ? <FiCheckCircle /> : <FiAlertCircle />}
-                    {message.text}
-                </div>
-            )}
-
             {/* Stats */}
             <div className="attendance-stats">
                 <div className="stat-item">
@@ -204,9 +157,9 @@ const Attendance = () => {
                     <span className="stat-number">{stats.absent}</span>
                     <span className="stat-text">Absent</span>
                 </div>
-                <div className="stat-item ontime">
-                    <span className="stat-number">{stats.onTime}</span>
-                    <span className="stat-text">On Time</span>
+                <div className="stat-item">
+                    <span className="stat-number">{stats.sessions}</span>
+                    <span className="stat-text">Sessions</span>
                 </div>
                 <div className="stat-item late">
                     <span className="stat-number">{stats.late}</span>
@@ -237,96 +190,62 @@ const Attendance = () => {
                         <table>
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>Employee</th>
                                     <th>Branch</th>
                                     <th>Check In</th>
                                     <th>Check Out</th>
-                                    <th>Duration</th>
+                                    <th>Work Time</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {attendance.map((record) => (
-                                    <tr key={record.attendanceId} className={editingRecord === record.attendanceId ? 'editing' : ''}>
-                                        <td>
-                                            <div className="employee-cell">
-                                                <strong>{record.employeeId}</strong>
-                                                <span>{getEmployeeName(record.employeeId)}</span>
-                                            </div>
-                                        </td>
-                                        <td>{getEmployeeBranch(record.employeeId)}</td>
-                                        <td>
-                                            {editingRecord === record.attendanceId ? (
-                                                <input
-                                                    type="time"
-                                                    className="time-input"
-                                                    value={editForm.checkInTime}
-                                                    onChange={(e) => setEditForm({ ...editForm, checkInTime: e.target.value })}
-                                                />
-                                            ) : (
-                                                formatTime(record.checkInTime)
-                                            )}
-                                        </td>
-                                        <td>
-                                            {editingRecord === record.attendanceId ? (
-                                                <input
-                                                    type="time"
-                                                    className="time-input"
-                                                    value={editForm.checkOutTime}
-                                                    onChange={(e) => setEditForm({ ...editForm, checkOutTime: e.target.value })}
-                                                />
-                                            ) : (
-                                                formatTime(record.checkOutTime)
-                                            )}
-                                        </td>
-                                        <td>{calculateDuration(record.checkInTime, record.checkOutTime)}</td>
-                                        <td>
-                                            {editingRecord === record.attendanceId ? (
-                                                <select
-                                                    className="status-select"
-                                                    value={editForm.status}
-                                                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                                                >
-                                                    <option value="present">Present</option>
-                                                    <option value="late">Late</option>
-                                                    <option value="half-day">Half Day</option>
-                                                </select>
-                                            ) : (
-                                                <span className={`badge ${getStatusBadgeClass(record.status)}`}>
-                                                    {record.status}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {editingRecord === record.attendanceId ? (
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="action-btn save"
-                                                        onClick={() => saveEdit(record)}
-                                                        disabled={saving}
-                                                    >
-                                                        <FiSave />
-                                                    </button>
-                                                    <button
-                                                        className="action-btn cancel"
-                                                        onClick={cancelEdit}
-                                                        disabled={saving}
-                                                    >
-                                                        <FiX />
-                                                    </button>
+                                {uniqueEmployeeIds.map((employeeId, index) => {
+                                    // Get all sessions for this employee, sorted by checkInTime
+                                    const sessions = attendance
+                                        .filter(a => a.employeeId === employeeId)
+                                        .sort((a, b) => new Date(b.checkInTime) - new Date(a.checkInTime)); // Newest first
+                                    // Get latest session (first after sorting by newest)
+                                    const latestSession = sessions[0];
+
+                                    // Calculate total work time from all sessions
+                                    let totalMinutes = 0;
+                                    sessions.forEach(s => {
+                                        if (s.checkInTime && s.checkOutTime) {
+                                            const diff = new Date(s.checkOutTime) - new Date(s.checkInTime);
+                                            totalMinutes += Math.floor(diff / (1000 * 60));
+                                        }
+                                    });
+                                    const totalHours = Math.floor(totalMinutes / 60);
+                                    const remainingMins = totalMinutes % 60;
+                                    const totalDuration = `${totalHours}h ${remainingMins}m`;
+
+                                    return (
+                                        <tr key={employeeId}>
+                                            <td>{index + 1}</td>
+                                            <td>
+                                                <div className="employee-cell">
+                                                    <strong>{employeeId}</strong>
+                                                    <span>{getEmployeeName(employeeId)}</span>
                                                 </div>
-                                            ) : (
-                                                <button
-                                                    className="action-btn edit"
-                                                    onClick={() => startEdit(record)}
-                                                >
-                                                    <FiEdit2 />
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td>{getEmployeeBranch(employeeId)}</td>
+                                            <td>{formatTime(latestSession.checkInTime)}</td>
+                                            <td>{formatTime(latestSession.checkOutTime)}</td>
+                                            <td>
+                                                <span className="work-time">
+                                                    <FiMapPin style={{ marginRight: '4px', fontSize: '12px' }} />
+                                                    {totalDuration} ({sessions.length} session{sessions.length > 1 ? 's' : ''})
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${getStatusBadgeClass(latestSession.status)}`}>
+                                                    {latestSession.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

@@ -107,4 +107,19 @@ export const deleteBranch = async (branchId) => {
     return response.data;
 };
 
+// ==================== LOCATION TRACKING ENDPOINTS ====================
+
+export const getEmployeeLocations = async () => {
+    const response = await api.get('/api/location/employees');
+    return response.data;
+};
+
+export const getWorkSummary = async (employeeId, date) => {
+    const url = date
+        ? `/api/location/work-summary/${employeeId}?date=${date}`
+        : `/api/location/work-summary/${employeeId}`;
+    const response = await api.get(url);
+    return response.data;
+};
+
 export default api;

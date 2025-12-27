@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMapPin } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMapPin, FiSearch } from 'react-icons/fi';
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee, getBranches } from '../services/api';
 import './Employees.css';
 
@@ -25,6 +25,8 @@ const Employees = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    const [searchTerm, setSearchTerm] = useState('');
+
     useEffect(() => {
         loadData();
     }, []);
@@ -43,6 +45,17 @@ const Employees = () => {
             setLoading(false);
         }
     };
+
+    // Filter and Sort Employees
+    const filteredEmployees = employees
+        .filter(emp => {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                emp.name?.toLowerCase().includes(searchLower) ||
+                emp.employeeId?.toLowerCase().includes(searchLower)
+            );
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     const openModal = (employee = null) => {
         if (employee) {
@@ -139,9 +152,21 @@ const Employees = () => {
         <div className="employees-page">
             <div className="page-header">
                 <h1 className="page-title">Employees</h1>
-                <button className="btn btn-primary" onClick={() => openModal()}>
-                    <FiPlus /> Add Employee
-                </button>
+                <div className="header-actions">
+                    <div className="search-wrapper">
+                        <FiSearch className="search-icon" />
+                        <input
+                            type="text"
+                            placeholder="Search employees..."
+                            className="search-input"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button className="btn btn-primary" onClick={() => openModal()}>
+                        <FiPlus /> Add Employee
+                    </button>
+                </div>
             </div>
 
             {success && <div className="alert alert-success">{success}</div>}
@@ -149,7 +174,7 @@ const Employees = () => {
 
             {/* Employees Table */}
             <div className="card">
-                {employees.length > 0 ? (
+                {filteredEmployees.length > 0 ? (
                     <div className="table-container">
                         <table>
                             <thead>
@@ -164,7 +189,7 @@ const Employees = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {employees.map((emp) => (
+                                {filteredEmployees.map((emp) => (
                                     <tr key={emp.employeeId}>
                                         <td>
                                             <strong>{emp.employeeId}</strong>

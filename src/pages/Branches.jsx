@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiCheck, FiX } from 'react-icons/fi';
-import { getBranches, createBranch, updateBranch, deleteBranch } from '../services/api';
+import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiCheck, FiX, FiUsers, FiSearch } from 'react-icons/fi';
+import { getBranches, createBranch, updateBranch, deleteBranch, getEmployeeLocations } from '../services/api';
 import './Branches.css';
 
 const Branches = () => {
@@ -19,18 +19,31 @@ const Branches = () => {
         latitude: '',
         longitude: '',
         radiusMeters: 100,
+        branchType: 'main',
         isActive: true,
     });
+
+    // Branch type colors
+    const branchTypeColors = {
+        main: '#EF4136',      // Primary red
+        sales: '#4CAF50',     // Green
+        inventory: '#FF7F27', // Secondary orange
+    };
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [mapReady, setMapReady] = useState(false);
+    const [employeeLocations, setEmployeeLocations] = useState([]);
+    const [showEmployees, setShowEmployees] = useState(true);
 
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markersRef = useRef([]);
     const circlesRef = useRef([]);
+    const employeeMarkersRef = useRef([]);
     const tempMarkerRef = useRef(null);
     const tempCircleRef = useRef(null);
+
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         loadBranches();
@@ -42,6 +55,33 @@ const Branches = () => {
             updateMapMarkers();
         }
     }, [branches, mapReady]);
+
+    // Filter and Sort Branches
+    const filteredBranches = branches
+        .filter(branch => {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                branch.name?.toLowerCase().includes(searchLower) ||
+                branch.address?.toLowerCase().includes(searchLower)
+            );
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    // Auto-refresh employee locations every 30 seconds
+    useEffect(() => {
+        if (mapReady) {
+            loadEmployeeLocations();
+            const interval = setInterval(loadEmployeeLocations, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [mapReady]);
+
+    // Update employee markers when locations change
+    useEffect(() => {
+        if (mapReady && showEmployees) {
+            updateEmployeeMarkers();
+        }
+    }, [employeeLocations, mapReady, showEmployees]);
 
     const initMap = () => {
         const checkGoogleMaps = () => {
@@ -95,6 +135,75 @@ const Branches = () => {
         }
     };
 
+    const loadEmployeeLocations = async () => {
+        try {
+            const response = await getEmployeeLocations();
+            setEmployeeLocations(response.employees || []);
+        } catch (error) {
+            console.error('Error loading employee locations:', error);
+        }
+    };
+
+    const updateEmployeeMarkers = () => {
+        // Clear existing employee markers
+        employeeMarkersRef.current.forEach(marker => marker.setMap(null));
+        employeeMarkersRef.current = [];
+
+        if (!mapInstanceRef.current || !showEmployees) return;
+
+        employeeLocations.forEach(emp => {
+            if (!emp.lastLocation) return;
+
+            const position = {
+                lat: emp.lastLocation.latitude,
+                lng: emp.lastLocation.longitude
+            };
+
+            // Determine marker color based on status
+            let markerColor = '#999'; // Gray for offline
+            if (emp.isOnline) {
+                markerColor = emp.isInsideGeofence ? '#4CAF50' : '#EF4136'; // Green if inside, Red if outside
+            }
+
+            // Create employee marker (smaller, different shape)
+            const marker = new window.google.maps.Marker({
+                position,
+                map: mapInstanceRef.current,
+                title: `${emp.name} (${emp.isInsideGeofence ? 'Inside' : 'Outside'})`,
+                icon: {
+                    path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 5,
+                    fillColor: markerColor,
+                    fillOpacity: 1,
+                    strokeColor: '#fff',
+                    strokeWeight: 1.5,
+                    rotation: 0,
+                },
+                zIndex: 1000, // Above branch markers
+            });
+
+            // Create info window for employee
+            const infoWindow = new window.google.maps.InfoWindow({
+                content: `
+                    <div style="padding: 8px; font-family: Poppins, sans-serif;">
+                        <strong>${emp.name}</strong><br/>
+                        <small style="color: ${markerColor}; font-weight: 600;">
+                            ${emp.isOnline ? (emp.isInsideGeofence ? '✓ Inside Geofence' : '⚠ Outside Geofence') : '○ Offline'}
+                        </small><br/>
+                        <small>Branch: ${emp.branchName || 'Unassigned'}</small><br/>
+                        ${emp.lastLocation ? `<small>Last seen: ${new Date(emp.lastLocation.timestamp).toLocaleTimeString()}</small>` : ''}
+                    </div>
+                `,
+            });
+
+            marker.addListener('click', () => {
+                infoWindow.open(mapInstanceRef.current, marker);
+            });
+
+            employeeMarkersRef.current.push(marker);
+        });
+    };
+
     const updateMapMarkers = () => {
         // Clear existing markers and circles
         markersRef.current.forEach(marker => marker.setMap(null));
@@ -108,6 +217,9 @@ const Branches = () => {
 
         branches.forEach(branch => {
             const position = { lat: branch.latitude, lng: branch.longitude };
+            const branchColor = branch.isActive
+                ? (branchTypeColors[branch.branchType] || branchTypeColors.main)
+                : '#999';
 
             // Create marker
             const marker = new window.google.maps.Marker({
@@ -117,7 +229,7 @@ const Branches = () => {
                 icon: {
                     path: window.google.maps.SymbolPath.CIRCLE,
                     scale: 10,
-                    fillColor: branch.isActive ? '#4CAF50' : '#999',
+                    fillColor: branchColor,
                     fillOpacity: 1,
                     strokeColor: '#fff',
                     strokeWeight: 2,
@@ -127,8 +239,9 @@ const Branches = () => {
             // Create info window
             const infoWindow = new window.google.maps.InfoWindow({
                 content: `
-                    <div style="padding: 8px;">
+                    <div style="padding: 8px; font-family: Poppins, sans-serif;">
                         <strong>${branch.name}</strong><br/>
+                        <small style="color: ${branchColor}; font-weight: 600; text-transform: capitalize;">${branch.branchType || 'main'}</small><br/>
                         <small>${branch.address || 'No address'}</small><br/>
                         <small>Radius: ${branch.radiusMeters}m</small>
                     </div>
@@ -144,9 +257,9 @@ const Branches = () => {
                 map: mapInstanceRef.current,
                 center: position,
                 radius: branch.radiusMeters,
-                fillColor: branch.isActive ? '#4CAF50' : '#999',
+                fillColor: branchColor,
                 fillOpacity: 0.2,
-                strokeColor: branch.isActive ? '#4CAF50' : '#999',
+                strokeColor: branchColor,
                 strokeOpacity: 0.8,
                 strokeWeight: 2,
             });
@@ -210,6 +323,7 @@ const Branches = () => {
             strokeColor: '#FF6B35',
             strokeOpacity: 1,
             strokeWeight: 2,
+            draggable: false, // Prevent dragging the circle itself
         });
 
         mapInstanceRef.current.panTo(position);
@@ -236,6 +350,7 @@ const Branches = () => {
                 latitude: branch.latitude.toString(),
                 longitude: branch.longitude.toString(),
                 radiusMeters: branch.radiusMeters,
+                branchType: branch.branchType || 'main',
                 isActive: branch.isActive,
             });
             setTimeout(() => {
@@ -249,6 +364,7 @@ const Branches = () => {
                 latitude: '',
                 longitude: '',
                 radiusMeters: 100,
+                branchType: 'main',
                 isActive: true,
             });
         }
@@ -352,9 +468,21 @@ const Branches = () => {
         <div className="branches-page">
             <div className="page-header">
                 <h1 className="page-title">Branches</h1>
-                <button className="btn btn-primary" onClick={() => openModal()}>
-                    <FiPlus /> Add Branch
-                </button>
+                <div className="header-actions">
+                    <div className="search-wrapper">
+                        <FiSearch className="search-icon" />
+                        <input
+                            type="text"
+                            placeholder="Search branches..."
+                            className="search-input"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button className="btn btn-primary" onClick={() => openModal()}>
+                        <FiPlus /> Add Branch
+                    </button>
+                </div>
             </div>
 
             {success && <div className="alert alert-success">{success}</div>}
@@ -364,32 +492,71 @@ const Branches = () => {
             <div className="map-container">
                 <div ref={mapRef} className="google-map"></div>
                 <div className="map-legend">
-                    <div className="legend-item">
-                        <span className="legend-dot active"></span>
-                        Active Branch
+                    <div className="legend-section">
+                        <span className="legend-title">Branches</span>
+                        <div className="legend-item">
+                            <span className="legend-dot main"></span>
+                            Main
+                        </div>
+                        <div className="legend-item">
+                            <span className="legend-dot sales"></span>
+                            Sales
+                        </div>
+                        <div className="legend-item">
+                            <span className="legend-dot inventory"></span>
+                            Inventory
+                        </div>
                     </div>
-                    <div className="legend-item">
-                        <span className="legend-dot inactive"></span>
-                        Inactive Branch
+                    <div className="legend-divider"></div>
+                    <div className="legend-section">
+                        <div className="legend-title-row">
+                            <span className="legend-title">Employees</span>
+                            <button
+                                className={`toggle-btn ${showEmployees ? 'active' : ''}`}
+                                onClick={() => setShowEmployees(!showEmployees)}
+                            >
+                                <FiUsers />
+                            </button>
+                        </div>
+                        {showEmployees && (
+                            <>
+                                <div className="legend-item">
+                                    <span className="legend-arrow inside">▲</span>
+                                    Inside
+                                </div>
+                                <div className="legend-item">
+                                    <span className="legend-arrow outside">▲</span>
+                                    Outside
+                                </div>
+                                <div className="legend-item">
+                                    <span className="legend-arrow offline">▲</span>
+                                    Offline
+                                </div>
+                                <div className="legend-info">
+                                    {employeeLocations.filter(e => e.isOnline).length} online
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Branches List */}
             <div className="card">
-                <h2 className="section-title">All Branches ({branches.length})</h2>
-                {branches.length > 0 ? (
+                <h2 className="section-title">All Branches ({filteredBranches.length})</h2>
+                {filteredBranches.length > 0 ? (
                     <div className="branches-grid">
-                        {branches.map((branch) => (
+                        {filteredBranches.map((branch) => (
                             <div key={branch.branchId} className={`branch-card ${!branch.isActive ? 'inactive' : ''}`}>
                                 <div className="branch-header">
                                     <div className="branch-icon">
                                         <FiMapPin />
                                     </div>
                                     <div className="branch-status">
-                                        {branch.isActive ? (
-                                            <span className="badge badge-success">Active</span>
-                                        ) : (
+                                        <span className={`badge badge-${branch.branchType || 'main'}`}>
+                                            {branch.branchType || 'main'}
+                                        </span>
+                                        {!branch.isActive && (
                                             <span className="badge badge-secondary">Inactive</span>
                                         )}
                                     </div>
@@ -463,6 +630,19 @@ const Branches = () => {
                                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                             placeholder="Full address"
                                         />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Branch Type *</label>
+                                        <select
+                                            className="form-input form-select"
+                                            value={formData.branchType}
+                                            onChange={(e) => setFormData({ ...formData, branchType: e.target.value })}
+                                        >
+                                            <option value="main">🏪 Main Branch</option>
+                                            <option value="sales">💰 Sales Branch</option>
+                                            <option value="inventory">📦 Inventory Branch</option>
+                                        </select>
                                     </div>
 
                                     <div className="form-row">

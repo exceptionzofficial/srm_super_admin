@@ -14,6 +14,7 @@
 .date-display {
     font-size: 14px;
     color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
 }
 
 .header-actions {
@@ -38,7 +39,7 @@
     right: 0;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     min-width: 180px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     flex-direction: column;
@@ -53,19 +54,20 @@
     text-align: left;
     cursor: pointer;
     color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
     transition: var(--transition);
 }
 
 .dropdown-content button:hover {
-    background: var(--bg-primary);
+    background: #F5F5F5;
 }
 
 .dropdown-content button:first-child {
-    border-radius: 8px 8px 0 0;
+    border-radius: 0;
 }
 
 .dropdown-content button:last-child {
-    border-radius: 0 0 8px 8px;
+    border-radius: 0;
 }
 
 /* Stats Grid */
@@ -81,7 +83,7 @@
     align-items: center;
     gap: 16px;
     background: var(--bg-secondary);
-    border-radius: 12px;
+    border-radius: 0;
     padding: 20px;
     border: 1px solid var(--border);
 }
@@ -89,7 +91,7 @@
 .stat-icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -151,6 +153,7 @@
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 16px;
+    font-family: 'Poppins', sans-serif;
 }
 
 .section-header {
@@ -173,7 +176,7 @@
     background: var(--primary);
     color: white;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: 0;
     font-size: 12px;
     font-weight: 500;
 }
@@ -189,7 +192,7 @@
 }
 
 .branch-table th {
-    background: linear-gradient(135deg, var(--bg-primary), var(--border));
+    background: #F5F5F5;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -205,7 +208,7 @@
 }
 
 .branch-table tbody tr:hover {
-    background: rgba(255, 107, 53, 0.03);
+    background: rgba(239, 65, 54, 0.03);
 }
 
 .text-center {
@@ -237,7 +240,7 @@
     min-width: 40px;
     height: 32px;
     padding: 0 12px;
-    border-radius: 8px;
+    border-radius: 0;
     font-size: 16px;
     font-weight: 700;
 }
@@ -265,7 +268,7 @@
     min-width: 50px;
     height: 28px;
     padding: 0 10px;
-    border-radius: 6px;
+    border-radius: 0;
     font-size: 13px;
     font-weight: 600;
 }
@@ -287,7 +290,7 @@
 
 /* Totals Row */
 .totals-row {
-    background: var(--bg-primary);
+    background: #F5F5F5;
     border-top: 2px solid var(--primary);
 }
 
