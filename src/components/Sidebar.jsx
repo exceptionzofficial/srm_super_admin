@@ -9,7 +9,9 @@ import {
     FiMapPin,
     FiCalendar,
     FiSettings,
-    FiLogOut
+    FiLogOut,
+    FiDollarSign,
+    FiFileText
 } from 'react-icons/fi';
 import './Sidebar.css';
 import srmLogo from '../assets/srm-logo.png';
@@ -20,6 +22,8 @@ const Sidebar = () => {
         { path: '/employees', icon: <FiUsers />, label: 'Employees' },
         { path: '/branches', icon: <FiMapPin />, label: 'Branches' },
         { path: '/attendance', icon: <FiCalendar />, label: 'Attendance' },
+        { path: '/requests', icon: <FiFileText />, label: 'Requests' },
+        { path: '/salary', icon: <FiDollarSign />, label: 'Salary' },
     ];
 
     return (

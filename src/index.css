@@ -58,7 +58,7 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: 24px;
+  padding: 32px;
   transition: var(--transition);
 }
 
@@ -73,7 +73,9 @@ body {
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Buttons */
@@ -94,7 +96,8 @@ body {
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn:active {
@@ -252,7 +255,7 @@ tbody tr:hover td {
   color: #4CAF50;
 }
 
-.badge-inventory {
+.badge-franchise {
   background: rgba(255, 127, 39, 0.1);
   color: #FF7F27;
 }

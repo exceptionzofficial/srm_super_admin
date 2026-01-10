@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMapPin, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMapPin, FiSearch, FiUpload, FiCreditCard, FiImage } from 'react-icons/fi';
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee, getBranches } from '../services/api';
 import './Employees.css';
 
@@ -21,7 +21,21 @@ const Employees = () => {
         department: '',
         designation: '',
         branchId: '',
+        workMode: 'OFFICE',
+        employeeType: 'mobile', // 'mobile' or 'kiosk'
+        // Documents
+        panNumber: '',
+        aadharNumber: '',
+        // Statutory & Bank
+        uan: '',
+        esicIP: '',
+        bankAccount: '',
+        ifscCode: '',
+        paymentMode: 'CASH',
+        joinedDate: '',
     });
+    const [photoFile, setPhotoFile] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -57,6 +71,10 @@ const Employees = () => {
         })
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    // Separate by type
+    const mobileEmployees = filteredEmployees.filter(emp => emp.employeeType !== 'kiosk');
+    const kioskEmployees = filteredEmployees.filter(emp => emp.employeeType === 'kiosk');
+
     const openModal = (employee = null) => {
         if (employee) {
             setEditingEmployee(employee);
@@ -68,7 +86,18 @@ const Employees = () => {
                 department: employee.department || '',
                 designation: employee.designation || '',
                 branchId: employee.branchId || '',
+                workMode: employee.workMode || 'OFFICE',
+                employeeType: employee.employeeType || 'mobile',
+                panNumber: employee.panNumber || '',
+                aadharNumber: employee.aadharNumber || '',
+                uan: employee.uan || '',
+                esicIP: employee.esicIP || '',
+                bankAccount: employee.bankAccount || '',
+                ifscCode: employee.ifscCode || '',
+                paymentMode: employee.paymentMode || 'CASH',
+                joinedDate: employee.joinedDate ? employee.joinedDate.split('T')[0] : '',
             });
+            setPhotoPreview(employee.photoUrl || null);
         } else {
             setEditingEmployee(null);
             setFormData({
@@ -79,8 +108,20 @@ const Employees = () => {
                 department: '',
                 designation: '',
                 branchId: branches.length > 0 ? branches[0].branchId : '',
+                workMode: 'OFFICE',
+                employeeType: 'mobile',
+                panNumber: '',
+                aadharNumber: '',
+                uan: '',
+                esicIP: '',
+                bankAccount: '',
+                ifscCode: '',
+                paymentMode: 'CASH',
+                joinedDate: '',
             });
+            setPhotoPreview(null);
         }
+        setPhotoFile(null);
         setShowModal(true);
         setError('');
     };
@@ -88,7 +129,21 @@ const Employees = () => {
     const closeModal = () => {
         setShowModal(false);
         setEditingEmployee(null);
+        setPhotoFile(null);
+        setPhotoPreview(null);
         setError('');
+    };
+
+    const handlePhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setPhotoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -107,11 +162,25 @@ const Employees = () => {
         }
 
         try {
+            // Build FormData if there's a photo file
+            let dataToSend;
+            if (photoFile) {
+                dataToSend = new FormData();
+                Object.entries(formData).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        dataToSend.append(key, value);
+                    }
+                });
+                dataToSend.append('photo', photoFile);
+            } else {
+                dataToSend = formData;
+            }
+
             if (editingEmployee) {
-                await updateEmployee(editingEmployee.employeeId, formData);
+                await updateEmployee(editingEmployee.employeeId, dataToSend);
                 setSuccess('Employee updated successfully');
             } else {
-                await createEmployee(formData);
+                await createEmployee(dataToSend);
                 setSuccess('Employee created successfully');
             }
             closeModal();
@@ -172,9 +241,87 @@ const Employees = () => {
             {success && <div className="alert alert-success">{success}</div>}
             {error && <div className="alert alert-danger">{error}</div>}
 
-            {/* Employees Table */}
+            {/* Mobile Employees Section */}
+            <h2 className="section-title" style={{ marginTop: '20px', marginBottom: '10px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📱 Mobile App Employees ({mobileEmployees.length})
+            </h2>
             <div className="card">
-                {filteredEmployees.length > 0 ? (
+                {mobileEmployees.length > 0 ? (
+                    <div className="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Branch</th>
+                                    <th>Department</th>
+                                    <th>Work Mode</th>
+                                    <th>Face Status</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mobileEmployees.map((emp) => (
+                                    <tr key={emp.employeeId}>
+                                        <td><strong>{emp.employeeId}</strong></td>
+                                        <td>
+                                            <div className="employee-info">
+                                                <div className={`employee-avatar ${emp.photoUrl ? 'has-photo' : ''}`}>
+                                                    {emp.photoUrl ? <img src={emp.photoUrl} alt={emp.name} /> : <FiUser />}
+                                                </div>
+                                                <div>
+                                                    <span className="employee-name">{emp.name}</span>
+                                                    <span className="employee-email">{emp.email}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="branch-cell">
+                                                <FiMapPin className="branch-icon-small" />
+                                                <span>{getBranchName(emp.branchId)}</span>
+                                            </div>
+                                        </td>
+                                        <td>{emp.department || '-'}</td>
+                                        <td>
+                                            {emp.workMode === 'FIELD_SALES' || emp.workMode === 'REMOTE' ? (
+                                                <span className="badge badge-warning">On Duty / Travel</span>
+                                            ) : (
+                                                <span className="badge badge-secondary">Office</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span className={`badge ${emp.faceId ? 'badge-success' : 'badge-warning'}`}>
+                                                {emp.faceId ? 'Registered' : 'Not Registered'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className={`badge ${emp.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
+                                                {emp.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="action-buttons">
+                                                <button className="action-btn edit" onClick={() => openModal(emp)}><FiEdit2 /></button>
+                                                <button className="action-btn delete" onClick={() => handleDelete(emp.employeeId)}><FiTrash2 /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="empty-message">No mobile app employees found.</p>
+                )}
+            </div>
+
+            {/* Kiosk Employees Section */}
+            <h2 className="section-title" style={{ marginTop: '30px', marginBottom: '10px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🖥️ Kiosk / Common Employees ({kioskEmployees.length})
+            </h2>
+            <div className="card">
+                {kioskEmployees.length > 0 ? (
                     <div className="table-container">
                         <table>
                             <thead>
@@ -189,15 +336,13 @@ const Employees = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredEmployees.map((emp) => (
+                                {kioskEmployees.map((emp) => (
                                     <tr key={emp.employeeId}>
-                                        <td>
-                                            <strong>{emp.employeeId}</strong>
-                                        </td>
+                                        <td><strong>{emp.employeeId}</strong></td>
                                         <td>
                                             <div className="employee-info">
-                                                <div className="employee-avatar">
-                                                    <FiUser />
+                                                <div className={`employee-avatar ${emp.photoUrl ? 'has-photo' : ''}`}>
+                                                    {emp.photoUrl ? <img src={emp.photoUrl} alt={emp.name} /> : <FiUser />}
                                                 </div>
                                                 <div>
                                                     <span className="employee-name">{emp.name}</span>
@@ -224,12 +369,8 @@ const Employees = () => {
                                         </td>
                                         <td>
                                             <div className="action-buttons">
-                                                <button className="action-btn edit" onClick={() => openModal(emp)}>
-                                                    <FiEdit2 />
-                                                </button>
-                                                <button className="action-btn delete" onClick={() => handleDelete(emp.employeeId)}>
-                                                    <FiTrash2 />
-                                                </button>
+                                                <button className="action-btn edit" onClick={() => openModal(emp)}><FiEdit2 /></button>
+                                                <button className="action-btn delete" onClick={() => handleDelete(emp.employeeId)}><FiTrash2 /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -238,7 +379,7 @@ const Employees = () => {
                         </table>
                     </div>
                 ) : (
-                    <p className="empty-message">No employees found. Add your first employee!</p>
+                    <p className="empty-message">No kiosk employees found.</p>
                 )}
             </div>
 
@@ -339,6 +480,175 @@ const Employees = () => {
                                         value={formData.designation}
                                         onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                                         placeholder="Job title"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Employee Type</label>
+                                <select
+                                    className="form-input form-select"
+                                    value={formData.employeeType}
+                                    onChange={(e) => setFormData({ ...formData, employeeType: e.target.value })}
+                                >
+                                    <option value="mobile">📱 Mobile App Employee (SRM...)</option>
+                                    <option value="kiosk">🖥️ Kiosk / Common Employee (SRMC...)</option>
+                                </select>
+                                <p className="form-hint" style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                                    Mobile: Uses personal phone & app. Kiosk: Uses common tablet at entrance.
+                                </p>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Work Mode (Attendance)</label>
+                                <select
+                                    className="form-input form-select"
+                                    value={formData.workMode}
+                                    onChange={(e) => setFormData({ ...formData, workMode: e.target.value })}
+                                >
+                                    <option value="OFFICE">Office Based (Strict Geofence)</option>
+                                    <option value="FIELD_SALES">Field Sales / Travel (Remote Check-in)</option>
+                                    <option value="REMOTE">Remote / WFH</option>
+                                </select>
+                                <p className="form-hint" style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                                    "Field Sales" allows checking in from anywhere using "On Duty" mode.
+                                </p>
+                            </div>
+
+
+                            {/* Document Fields Section */}
+                            <div className="form-section-divider">
+                                <span>Employee Documents</span>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label"><FiCreditCard style={{ marginRight: '6px' }} />PAN Number</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.panNumber}
+                                        onChange={(e) => setFormData({ ...formData, panNumber: e.target.value.toUpperCase() })}
+                                        placeholder="e.g., ABCDE1234F"
+                                        maxLength={10}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label"><FiCreditCard style={{ marginRight: '6px' }} />Aadhar Number</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.aadharNumber}
+                                        onChange={(e) => setFormData({ ...formData, aadharNumber: e.target.value.replace(/\D/g, '') })}
+                                        placeholder="e.g., 123456789012"
+                                        maxLength={12}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label"><FiImage style={{ marginRight: '6px' }} />Employee Photo</label>
+                                <div className="photo-upload-container">
+                                    {photoPreview ? (
+                                        <div className="photo-preview">
+                                            <img src={photoPreview} alt="Preview" />
+                                            <button
+                                                type="button"
+                                                className="photo-remove-btn"
+                                                onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="photo-upload-label">
+                                            <FiUpload size={24} />
+                                            <span>Click to upload photo</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handlePhotoChange}
+                                                style={{ display: 'none' }}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+                                <p className="form-hint" style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                                    Max file size: 5MB. Supported formats: JPG, PNG, GIF
+                                </p>
+                            </div>
+
+                            {/* Statutory & Bank Details Section */}
+                            <div className="form-section-divider">
+                                <span>Statutory & Bank Details</span>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">UAN (PF)</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.uan}
+                                        onChange={(e) => setFormData({ ...formData, uan: e.target.value })}
+                                        placeholder="Universal Account Number"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">ESIC IP No</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.esicIP}
+                                        onChange={(e) => setFormData({ ...formData, esicIP: e.target.value })}
+                                        placeholder="Insurance Number"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Bank Account No</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.bankAccount}
+                                        onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                                        placeholder="Enter Account Number"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">IFSC Code</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.ifscCode}
+                                        onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })}
+                                        placeholder="Enter IFSC Code"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Payment Mode</label>
+                                    <select
+                                        className="form-input form-select"
+                                        value={formData.paymentMode}
+                                        onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
+                                    >
+                                        <option value="CASH">CASH</option>
+                                        <option value="BANK">BANK TRANSFER</option>
+                                        <option value="CHEQUE">CHEQUE</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Date of Joining</label>
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={formData.joinedDate}
+                                        onChange={(e) => setFormData({ ...formData, joinedDate: e.target.value })}
                                     />
                                 </div>
                             </div>

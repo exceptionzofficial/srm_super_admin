@@ -4,7 +4,7 @@
 
 import axios from 'axios';
 
-// API Base URL - Production Vercel deployment
+// API Base URL - Production
 const API_BASE_URL = 'https://srm-backend-lake.vercel.app';
 
 const api = axios.create({
@@ -37,11 +37,25 @@ export const getEmployee = async (employeeId) => {
 };
 
 export const createEmployee = async (employeeData) => {
+    // Use FormData if there's a photo file
+    if (employeeData instanceof FormData) {
+        const response = await api.post('/api/employees', employeeData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    }
     const response = await api.post('/api/employees', employeeData);
     return response.data;
 };
 
 export const updateEmployee = async (employeeId, updates) => {
+    // Use FormData if there's a photo file
+    if (updates instanceof FormData) {
+        const response = await api.put(`/api/employees/${employeeId}`, updates, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    }
     const response = await api.put(`/api/employees/${employeeId}`, updates);
     return response.data;
 };
@@ -118,6 +132,31 @@ export const getWorkSummary = async (employeeId, date) => {
     const url = date
         ? `/api/location/work-summary/${employeeId}?date=${date}`
         : `/api/location/work-summary/${employeeId}`;
+    const response = await api.get(url);
+    return response.data;
+};
+
+// ==================== SALARY ENDPOINTS ====================
+
+export const createSalary = async (salaryData) => {
+    const response = await api.post('/api/salary', salaryData);
+    return response.data;
+};
+
+export const getSalaries = async (employeeId) => {
+    const response = await api.get(`/api/salary/employee/${employeeId}`);
+    return response.data;
+};
+
+export const updateSalary = async (salaryId, data) => {
+    const response = await api.put(`/api/salary/${salaryId}`, data);
+    return response.data;
+};
+
+// ==================== REQUEST ENDPOINTS ====================
+
+export const getAllRequests = async (status = null) => {
+    const url = status ? `/api/requests?status=${status}` : '/api/requests';
     const response = await api.get(url);
     return response.data;
 };

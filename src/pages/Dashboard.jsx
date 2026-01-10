@@ -1,40 +1,16 @@
 /**
- * Dashboard Page - Analytics, Charts, and Reports
+ * Dashboard Page - Stats and Live Status
  */
 
 import { useState, useEffect } from 'react';
-import { FiUsers, FiUserCheck, FiClock, FiMapPin, FiDownload, FiRefreshCw } from 'react-icons/fi';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    LineElement,
-    PointElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Bar, Line, Doughnut } from 'react-chartjs-2';
+import { FiUsers, FiUserCheck, FiClock, FiMapPin, FiDownload, FiRefreshCw, FiPieChart } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { getEmployees, getAttendanceByDate, getBranches } from '../services/api';
 import './Dashboard.css';
 
-// Register ChartJS components
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    LineElement,
-    PointElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         totalEmployees: 0,
         registeredFaces: 0,
@@ -44,9 +20,7 @@ const Dashboard = () => {
     const [branches, setBranches] = useState([]);
     const [branchStats, setBranchStats] = useState([]);
     const [todayAttendance, setTodayAttendance] = useState([]);
-    const [weeklyData, setWeeklyData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState('daily'); // daily, weekly, monthly
     const [employees, setEmployees] = useState([]);
 
     useEffect(() => {
@@ -89,32 +63,34 @@ const Dashboard = () => {
                 console.log('No attendance records yet');
             }
 
-            // Calculate branch-wise stats
+            // --- LOGIC FIX: Count UNIQUE employees ---
+            // Create a Set of unique employee IDs present today
+            const presentEmployeeIds = new Set(todayRecords.map(r => r.employeeId));
+            const uniquePresentCount = presentEmployeeIds.size;
+
+            // Calculate branch-wise stats with UNIQUE logic
             const branchStatsData = allBranches.map(branch => {
                 const branchEmployees = allEmployees.filter(e => e.branchId === branch.branchId);
-                const branchPresent = todayRecords.filter(r =>
-                    branchEmployees.some(e => e.employeeId === r.employeeId)
-                );
+
+                // Count how many unique employees from this branch are present
+                const branchPresentCount = branchEmployees.filter(e => presentEmployeeIds.has(e.employeeId)).length;
+
                 return {
                     ...branch,
                     totalEmployees: branchEmployees.length,
                     registeredFaces: branchEmployees.filter(e => e.faceId).length,
-                    presentToday: branchPresent.length,
+                    presentToday: branchPresentCount, // Fixed logic
                     attendanceRate: branchEmployees.length > 0
-                        ? Math.round((branchPresent.length / branchEmployees.length) * 100)
+                        ? Math.round((branchPresentCount / branchEmployees.length) * 100)
                         : 0,
                 };
             });
             setBranchStats(branchStatsData);
 
-            // Get weekly data for charts
-            const weekData = await getWeeklyAttendance();
-            setWeeklyData(weekData);
-
             setStats({
                 totalEmployees: allEmployees.length,
                 registeredFaces: allEmployees.filter(e => e.faceId).length,
-                todayPresent: todayRecords.length,
+                todayPresent: uniquePresentCount, // Fixed logic
                 totalBranches: allBranches.length,
             });
             setTodayAttendance(todayRecords);
@@ -125,29 +101,6 @@ const Dashboard = () => {
         }
     };
 
-    const getWeeklyAttendance = async () => {
-        const data = [];
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-
-            try {
-                const response = await getAttendanceByDate(dateStr);
-                data.push({
-                    date: dateStr,
-                    day: dayName,
-                    present: response.records?.length || 0,
-                    late: response.records?.filter(r => r.status === 'late')?.length || 0,
-                });
-            } catch (e) {
-                data.push({ date: dateStr, day: dayName, present: 0, late: 0 });
-            }
-        }
-        return data;
-    };
-
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
         return new Date(isoString).toLocaleTimeString('en-US', {
@@ -156,80 +109,8 @@ const Dashboard = () => {
         });
     };
 
-    // Chart configurations
-    const weeklyChartData = {
-        labels: weeklyData.map(d => d.day),
-        datasets: [
-            {
-                label: 'Present',
-                data: weeklyData.map(d => d.present),
-                backgroundColor: 'rgba(76, 175, 80, 0.8)',
-                borderColor: '#4CAF50',
-                borderWidth: 2,
-            },
-            {
-                label: 'Late',
-                data: weeklyData.map(d => d.late),
-                backgroundColor: 'rgba(255, 152, 0, 0.8)',
-                borderColor: '#FF9800',
-                borderWidth: 2,
-            },
-        ],
-    };
-
-    const branchChartData = {
-        labels: branchStats.map(b => b.name),
-        datasets: [
-            {
-                label: 'Employees',
-                data: branchStats.map(b => b.totalEmployees),
-                backgroundColor: 'rgba(33, 150, 243, 0.8)',
-            },
-            {
-                label: 'Present Today',
-                data: branchStats.map(b => b.presentToday),
-                backgroundColor: 'rgba(76, 175, 80, 0.8)',
-            },
-        ],
-    };
-
-    const attendanceDistribution = {
-        labels: ['Present', 'Late', 'Absent'],
-        datasets: [{
-            data: [
-                todayAttendance.filter(r => r.status === 'present').length,
-                todayAttendance.filter(r => r.status === 'late').length,
-                stats.totalEmployees - todayAttendance.length,
-            ],
-            backgroundColor: ['#4CAF50', '#FF9800', '#f44336'],
-            borderWidth: 0,
-        }],
-    };
-
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom',
-            },
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1 },
-            },
-        },
-    };
-
-    const doughnutOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom',
-            },
-        },
+    const handleBranchClick = (branch) => {
+        navigate(`/branches/${branch.branchId}`);
     };
 
     // Export to Excel
@@ -245,15 +126,6 @@ const Dashboard = () => {
                 'Check Out': formatTime(record.checkOutTime),
                 'Status': record.status,
                 'Date': new Date().toLocaleDateString(),
-            }));
-        } else if (type === 'weekly') {
-            filename = `Weekly_Attendance_Report.xlsx`;
-            data = weeklyData.map(d => ({
-                'Date': d.date,
-                'Day': d.day,
-                'Present': d.present,
-                'Late': d.late,
-                'Total': d.present + d.late,
             }));
         } else if (type === 'branch') {
             filename = `Branch_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -320,13 +192,15 @@ const Dashboard = () => {
                     <button className="btn btn-secondary" onClick={loadDashboardData}>
                         <FiRefreshCw /> Refresh
                     </button>
+                    <button className="btn btn-primary btn-analytics" onClick={() => navigate('/analytics')}>
+                        <FiPieChart /> View Analytics
+                    </button>
                     <div className="export-dropdown">
-                        <button className="btn btn-primary">
-                            <FiDownload /> Export Report
+                        <button className="btn btn-secondary">
+                            <FiDownload /> Export
                         </button>
                         <div className="dropdown-content">
                             <button onClick={() => exportToExcel('daily')}>📅 Daily Attendance</button>
-                            <button onClick={() => exportToExcel('weekly')}>📊 Weekly Summary</button>
                             <button onClick={() => exportToExcel('branch')}>🏢 Branch Report</button>
                             <button onClick={() => exportToExcel('employees')}>👥 Employee List</button>
                         </div>
@@ -377,26 +251,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Charts Section */}
-            <div className="charts-grid">
-                {/* Weekly Attendance Chart */}
-                <div className="card chart-card">
-                    <h2 className="section-title">Weekly Attendance Trend</h2>
-                    <div className="chart-container">
-                        <Bar data={weeklyChartData} options={chartOptions} />
-                    </div>
-                </div>
-
-                {/* Attendance Distribution */}
-                <div className="card chart-card-small">
-                    <h2 className="section-title">Today's Distribution</h2>
-                    <div className="chart-container-small">
-                        <Doughnut data={attendanceDistribution} options={doughnutOptions} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Branch-wise Stats - Professional Table Layout */}
+            {/* Branch-wise Stats */}
             {branchStats.length > 0 && (
                 <div className="card branch-overview-card">
                     <div className="section-header">
@@ -421,7 +276,12 @@ const Dashboard = () => {
                             </thead>
                             <tbody>
                                 {branchStats.map((branch) => (
-                                    <tr key={branch.branchId}>
+                                    <tr
+                                        key={branch.branchId}
+                                        onClick={() => handleBranchClick(branch)}
+                                        style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                        className="branch-row"
+                                    >
                                         <td>
                                             <div className="branch-name-cell">
                                                 <strong>{branch.name}</strong>

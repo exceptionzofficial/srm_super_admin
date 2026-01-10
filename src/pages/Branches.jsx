@@ -27,7 +27,7 @@ const Branches = () => {
     const branchTypeColors = {
         main: '#EF4136',      // Primary red
         sales: '#4CAF50',     // Green
-        inventory: '#FF7F27', // Secondary orange
+        franchise: '#FF7F27', // Secondary orange
     };
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -503,8 +503,8 @@ const Branches = () => {
                             Sales
                         </div>
                         <div className="legend-item">
-                            <span className="legend-dot inventory"></span>
-                            Inventory
+                            <span className="legend-dot franchise"></span>
+                            Franchise
                         </div>
                     </div>
                     <div className="legend-divider"></div>
@@ -641,7 +641,7 @@ const Branches = () => {
                                         >
                                             <option value="main">🏪 Main Branch</option>
                                             <option value="sales">💰 Sales Branch</option>
-                                            <option value="inventory">📦 Inventory Branch</option>
+                                            <option value="franchise">🏬 Franchise</option>
                                         </select>
                                     </div>
 
